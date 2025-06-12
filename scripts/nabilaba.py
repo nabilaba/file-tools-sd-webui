@@ -98,7 +98,7 @@ def on_ui_tabs():
 
         with gr.Tab("🗑️ Delete Files"):
             with gr.Row():
-                folder_dropdown = gr.Dropdown(label="📁 Folder", interactive=True)
+                folder_dropdown = gr.Dropdown(choices=list_root_folders(), label="📁 Folder", interactive=True)
                 ext_dropdown = gr.Dropdown(choices=["All", ".ckpt", ".safetensors", ".pt", ".bin", ".pth"], label="🔍 Filter by Extension", value="All", interactive=True)
 
             file_checkbox = gr.CheckboxGroup(choices=[], label="☑️ Select Files (Relative Path + Size)", interactive=True)
@@ -136,7 +136,7 @@ def on_ui_tabs():
         with gr.Tab("⬇️ Download File"):
             with gr.Row():
                 url_input = gr.Textbox(label="🔗 File URL")
-                save_to_folder = gr.Dropdown(label="📁 Save To Folder")
+                save_to_folder = gr.Dropdown(choices=list_root_folders(), label="📁 Save To Folder")
 
             download_status = gr.Textbox(label="📶 Progress", lines=6, interactive=False)
             download_btn = gr.Button("⬇️ Start Download")
