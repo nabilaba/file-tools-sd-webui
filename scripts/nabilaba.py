@@ -1,6 +1,4 @@
 import os
-import time
-import mimetypes
 import requests
 from urllib.parse import urlparse
 import gradio as gr
@@ -8,6 +6,7 @@ from modules import script_callbacks
 
 def list_root_folders():
     root_base = os.path.abspath(os.path.join(os.getcwd(), "models"))
+    os.makedirs(root_base, exist_ok=True)
     return sorted([f for f in os.listdir(root_base) if os.path.isdir(os.path.join(root_base, f))])
 
 def format_size(size_bytes):
@@ -80,17 +79,16 @@ def download_file(url, folder):
                         kb = downloaded / 1024
                         yield gr.update(), gr.update(), f"⬇️ Downloaded {kb:.2f} KB"
 
-        yield gr.update(), gr.update(), f"✅ Completed: {filename}"
+        yield gr.update(interactive=True), gr.update(interactive=True), f"✅ Download complete: {filename}"
     except Exception as e:
-        yield gr.update(), gr.update(), f"❌ Error: {e}"
+        yield gr.update(interactive=True), gr.update(interactive=True), f"❌ Error: {e}"
 
 def download_wrapper(url, folder):
-    # Disable inputs at start
     yield gr.update(interactive=False), gr.update(interactive=False), "⏳ Starting download..."
-    for update in download_file(url, folder):
-        yield update
-    # Re-enable inputs at end
-    yield gr.update(interactive=True), gr.update(interactive=True), "✅ Ready for next download"
+    yield from download_file(url, folder)
+
+def refresh_folders():
+    return gr.update(choices=list_root_folders())
 
 def on_ui_tabs():
     with gr.Blocks() as combined_ui:
@@ -110,9 +108,6 @@ def on_ui_tabs():
             def update_files(folder, ext):
                 labels, summary, rel_paths = get_file_details(folder, ext)
                 return gr.update(choices=labels, value=[]), summary, rel_paths
-
-            def refresh_folders():
-                return gr.update(choices=list_root_folders())
 
             folder_dropdown.change(update_files, inputs=[folder_dropdown, ext_dropdown], outputs=[file_checkbox, file_summary, hidden_all_rel_paths])
             ext_dropdown.change(update_files, inputs=[folder_dropdown, ext_dropdown], outputs=[file_checkbox, file_summary, hidden_all_rel_paths])
@@ -142,7 +137,12 @@ def on_ui_tabs():
             download_btn = gr.Button("⬇️ Start Download")
 
             save_to_folder.change(refresh_folders, outputs=save_to_folder)
-            download_btn.click(download_wrapper, inputs=[url_input, save_to_folder], outputs=[url_input, save_to_folder, download_status], queue=True)
+            download_btn.click(
+                download_wrapper,
+                inputs=[url_input, save_to_folder],
+                outputs=[url_input, save_to_folder, download_status],
+                queue=True
+            )
 
     return [(combined_ui, "🧰 File Tools", "file_tools_tab")]
 
