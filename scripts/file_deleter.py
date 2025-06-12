@@ -5,15 +5,13 @@ from modules import script_callbacks, shared
 def on_ui_tabs():
     with gr.Blocks() as file_deleter_ui:
         gr.Markdown("## File Deleter")
-        folder_choices = [
-            "models",
-            "models/Stable-diffusion",
-            "extensions",
-            "loras",
-            "embeddings"
-        ]
-        folder = gr.Dropdown(choices=folder_choices, label="Folder")
-        file = gr.Dropdown(choices=[], label="File (with subfolder path)")
+
+        # Automatically list all root folders under webui root (one level only)
+        root_base = os.path.abspath(os.path.join(shared.script_path, os.pardir))
+        root_folders = [f for f in os.listdir(root_base) if os.path.isdir(os.path.join(root_base, f))]
+        folder = gr.Dropdown(choices=sorted(root_folders), label="Folder (Auto-detected from root)")
+
+        file = gr.Dropdown(choices=[], label="File (including subfolders)", multiselect=False)
         delete = gr.Button("Delete")
         status = gr.Textbox(label="Status")
 
@@ -30,6 +28,8 @@ def on_ui_tabs():
             return sorted(file_list)
 
         def delete_file(folder, rel_path):
+            if isinstance(rel_path, list):
+                rel_path = rel_path[0]  # support single-selection
             base_path = os.path.abspath(os.path.join(shared.script_path, os.pardir, folder))
             file_path = os.path.join(base_path, rel_path)
             if not os.path.isfile(file_path):
