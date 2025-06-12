@@ -7,7 +7,7 @@ def on_ui_tabs():
         gr.Markdown("## File Deleter")
 
         # Automatically list all root folders under webui root (one level only)
-        root_base = root_base = os.getcwd()
+        root_base = os.getcwd()
         root_folders = [f for f in os.listdir(root_base) if os.path.isdir(os.path.join(root_base, f))]
         folder = gr.Dropdown(choices=sorted(root_folders), label="Folder (Auto-detected from root)")
 
