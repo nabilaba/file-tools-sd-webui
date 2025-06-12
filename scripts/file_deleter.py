@@ -8,37 +8,51 @@ def list_root_folders():
     root_base = os.path.abspath(os.path.join(os.getcwd(), "models"))
     return sorted([f for f in os.listdir(root_base) if os.path.isdir(os.path.join(root_base, f))])
 
-def get_file_details(folder):
+def format_size(bytes_val):
+    return f"{bytes_val / 1024 / 1024:.2f} MB" if bytes_val > 1024 * 1024 else f"{bytes_val / 1024:.2f} KB"
+
+def get_file_details_for_checkbox(folder, ext_filter):
     base_path = os.path.abspath(os.path.join(os.getcwd(), "models", folder))
     if not os.path.isdir(base_path):
-        return [], []
+        return gr.update(choices=[], value=[]), gr.update(value="")
 
-    rows = []
-    choices = []
+    checkbox_labels = []
+    total_size = 0
+    total_files = 0
+
     for root, _, files in os.walk(base_path):
         for fname in files:
             full_path = os.path.join(root, fname)
             rel_path = os.path.relpath(full_path, base_path)
             size = os.path.getsize(full_path)
-            ctime = os.path.getctime(full_path)
-            mtime = os.path.getmtime(full_path)
             ftype, _ = mimetypes.guess_type(full_path)
 
-            rows.append([
-                fname,
-                rel_path,
-                f"{size / 1024:.2f} KB",
-                ftype or "Unknown",
-                time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ctime)),
-                time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(mtime))
-            ])
-            choices.append(rel_path)
+            # Filter by extension
+            if ext_filter != "All" and not fname.endswith(ext_filter):
+                continue
 
-    return rows, gr.update(choices=choices, value=[])
+            ctime = os.path.getctime(full_path)
+            mtime = os.path.getmtime(full_path)
 
-def delete_selected_files(folder, selected_paths):
+            label = (
+                f"📄 {fname}\n\n"
+                f"Relative Path: {rel_path}\n"
+                f"Size: {format_size(size)}\n"
+                f"Type: {ftype or 'Unknown'}\n"
+                f"Created: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(ctime))}\n"
+                f"Modified: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(mtime))}"
+            )
+
+            checkbox_labels.append((label, rel_path))
+            total_size += size
+            total_files += 1
+
+    total_info = f"📦 Total files: {total_files} — Total size: {format_size(total_size)}"
+    return gr.update(choices=checkbox_labels, value=[]), gr.update(value=total_info)
+
+def delete_selected_files(folder, selected_paths, ext_filter):
     if not selected_paths:
-        return "⚠️ Please select one or more files."
+        return "⚠️ Please select one or more files.", *get_file_details_for_checkbox(folder, ext_filter)
 
     base_path = os.path.abspath(os.path.join(os.getcwd(), "models", folder))
     deleted, errors = [], []
@@ -59,40 +73,45 @@ def delete_selected_files(folder, selected_paths):
     if not deleted and not errors:
         message = "⚠️ No valid files selected."
 
-    rows, choices = get_file_details(folder)
-    return message, rows, choices
+    return message, *get_file_details_for_checkbox(folder, ext_filter)
 
 def on_ui_tabs():
     with gr.Blocks() as file_deleter_ui:
-        gr.Markdown("## 🗑️ File Deleter for Stable Diffusion WebUI")
+        gr.Markdown("## 🗑️ File Deleter with Extension Filter & Size Summary")
 
-        folder_dropdown = gr.Dropdown(
-            choices=list_root_folders(),
-            label="📁 Folder",
-            interactive=True
-        )
+        with gr.Row():
+            folder_dropdown = gr.Dropdown(
+                choices=list_root_folders(),
+                label="📁 Folder",
+                interactive=True
+            )
+            ext_filter_dropdown = gr.Dropdown(
+                choices=["All", ".ckpt", ".safetensors", ".txt", ".bin", ".pt"],
+                label="🔍 Filter by Extension",
+                value="All",
+                interactive=True
+            )
 
-        file_multiselect = gr.CheckboxGroup(
+        file_checkbox = gr.CheckboxGroup(
             choices=[],
-            label="📄 Select Files to Delete",
+            label="📄 Select Files (Details in Label)",
             interactive=True
         )
 
-        file_table = gr.Dataframe(
-            headers=["Name", "Relative Path", "Size", "Type", "Created", "Modified"],
-            label="📊 File Details",
-            interactive=False
-        )
+        total_info = gr.Textbox(label="📊 Total File Info", interactive=False)
 
         delete_btn = gr.Button("❌ Delete Selected Files")
         status = gr.Textbox(label="📝 Status", lines=10, interactive=False)
 
-        def update_ui(folder):
-            rows, choices = get_file_details(folder)
-            return rows, choices
+        # Update checkbox + total when folder/ext changed
+        def refresh(folder, ext_filter):
+            return get_file_details_for_checkbox(folder, ext_filter)
 
-        folder_dropdown.change(fn=update_ui, inputs=folder_dropdown, outputs=[file_table, file_multiselect])
-        delete_btn.click(fn=delete_selected_files, inputs=[folder_dropdown, file_multiselect], outputs=[status, file_table, file_multiselect])
+        folder_dropdown.change(fn=refresh, inputs=[folder_dropdown, ext_filter_dropdown], outputs=[file_checkbox, total_info])
+        ext_filter_dropdown.change(fn=refresh, inputs=[folder_dropdown, ext_filter_dropdown], outputs=[file_checkbox, total_info])
+
+        # Delete
+        delete_btn.click(fn=delete_selected_files, inputs=[folder_dropdown, file_checkbox, ext_filter_dropdown], outputs=[status, file_checkbox, total_info])
 
     return [(file_deleter_ui, "File Deleter", "file_deleter_tab")]
 
