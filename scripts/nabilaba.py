@@ -1,4 +1,5 @@
 import os
+import shutil
 import requests
 from urllib.parse import urlparse
 import gradio as gr
@@ -56,46 +57,55 @@ def delete_selected_files(folder, selected_files):
     return "\n".join(messages)
 
 def download_file(url, folder):
-    if not url or not folder:
-        yield gr.update(), gr.update(), "⚠️ Please provide both URL and folder"
-        return
-
-    dest_dir = os.path.abspath(os.path.join(os.getcwd(), "models", folder))
-    os.makedirs(dest_dir, exist_ok=True)
-
     try:
-        with requests.get(url, stream=True) as r:
-            r.raise_for_status()
+        if not url or not folder:
+            yield gr.update(), gr.update(), "⚠️ Please provide both URL and folder"
+            return
 
-            # Ambil nama file dari Content-Disposition atau URL
-            filename = None
-            content_disp = r.headers.get("Content-Disposition")
-            if content_disp:
+        dest_dir = os.path.abspath(os.path.join(os.getcwd(), "models", folder))
+        os.makedirs(dest_dir, exist_ok=True)
+
+        if url.startswith(("http://", "https://")):
+            response = requests.get(url, stream=True)
+            response.raise_for_status()
+
+            content_disposition = response.headers.get("Content-Disposition", "")
+            if "filename=" in content_disposition:
                 import re
-                match = re.findall("filename\\*=UTF-8''(.+)", content_disp)
+                match = re.findall("filename\\*=UTF-8''(.+)", content_disposition)
                 if match:
                     filename = match[0]
                 else:
-                    match = re.findall("filename=\"?([^\";]+)", content_disp)
-                    if match:
-                        filename = match[0]
-
-            if not filename:
-                filename = os.path.basename(urlparse(url).path) or "downloaded_file"
+                    match = re.findall("filename=\"?([^\";]+)", content_disposition)
+                    filename = match[0] if match else "downloaded_file"
+            else:
+                parsed_url = urlparse(url)
+                filename = os.path.basename(parsed_url.path) or "downloaded_file"
 
             dest_path = os.path.join(dest_dir, filename)
 
-            total = int(r.headers.get('content-length', 0))
+            total = int(response.headers.get('content-length', 0))
             downloaded = 0
-            with open(dest_path, 'wb') as f:
-                for chunk in r.iter_content(chunk_size=8192):
+            with open(dest_path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
                     if chunk:
                         f.write(chunk)
                         downloaded += len(chunk)
                         kb = downloaded / 1024
                         yield gr.update(), gr.update(), f"⬇️ Downloaded {kb:.2f} KB"
 
-        yield gr.update(interactive=True), gr.update(interactive=True), f"✅ Download complete: {filename}"
+            mb = downloaded / 1024
+            yield gr.update(interactive=True), gr.update(interactive=True), f"✅ Download complete: {filename} ({mb:.2f} MB)"
+
+        elif os.path.isfile(url):
+            filename = os.path.basename(url)
+            dest_path = os.path.join(dest_dir, filename)
+            shutil.copy(url, dest_path)
+            yield gr.update(interactive=True), gr.update(interactive=True), f"✅ Copied: {filename}"
+
+        else:
+            yield gr.update(interactive=True), gr.update(interactive=True), "❌ Invalid URL or file path"
+
     except Exception as e:
         yield gr.update(interactive=True), gr.update(interactive=True), f"❌ Error: {e}"
 
@@ -118,7 +128,7 @@ def on_ui_tabs():
             file_checkbox = gr.CheckboxGroup(choices=[], label="☑️ Select Files (Relative Path + Size)", interactive=True)
             file_summary = gr.Textbox(label="📊 Total File Info", interactive=False)
             delete_btn = gr.Button("❌ Delete Selected Files")
-            status_box = gr.Textbox(label="📝 Status", lines=10, interactive=False)
+            status_box = gr.Textbox(label="🗘️ Status", lines=10, interactive=False)
             hidden_all_rel_paths = gr.State([])
 
             def update_files(folder, ext):
@@ -149,7 +159,7 @@ def on_ui_tabs():
                 url_input = gr.Textbox(label="🔗 File URL")
                 save_to_folder = gr.Dropdown(choices=list_root_folders(), label="📁 Save To Folder")
 
-            download_status = gr.Textbox(label="📶 Progress", lines=6, interactive=False)
+            download_status = gr.Textbox(label="🛆 Progress", lines=6, interactive=False)
             download_btn = gr.Button("⬇️ Start Download")
 
             save_to_folder.change(refresh_folders, outputs=save_to_folder)
