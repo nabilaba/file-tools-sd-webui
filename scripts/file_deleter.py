@@ -31,10 +31,13 @@ def on_ui_tabs():
             return sorted(file_list)
 
         def show_file_info(folder, rel_path):
+            if isinstance(rel_path, list):
+                rel_path = rel_path[0] if rel_path else ""
+
             if not rel_path:
                 return gr.update(visible=False), []
 
-            base_path = os.path.abspath(os.path.join(os.getcwd(), folder))
+            base_path = os.path.abspath(os.path.join(os.getcwd(), "models", folder))
             file_path = os.path.join(base_path, rel_path)
 
             if not os.path.isfile(file_path):
@@ -55,10 +58,13 @@ def on_ui_tabs():
             return datetime.datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
 
         def delete_file(folder, rel_path):
+            if isinstance(rel_path, list):
+                rel_path = rel_path[0] if rel_path else ""
+
             if not rel_path:
                 return "⚠️ Please select a file to delete.", gr.update(visible=False), []
 
-            base_path = os.path.abspath(os.path.join(os.getcwd(), folder))
+            base_path = os.path.abspath(os.path.join(os.getcwd(), "models", folder))
             file_path = os.path.join(base_path, rel_path)
 
             if not os.path.isfile(file_path):
