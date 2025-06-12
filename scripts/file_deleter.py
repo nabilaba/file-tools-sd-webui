@@ -25,86 +25,74 @@ def get_file_details(folder):
             ftype, _ = mimetypes.guess_type(full_path)
 
             rows.append([
-                fname,                               # File Name
-                rel_path,                            # Relative Path
-                f"{size / 1024:.2f} KB",             # Size
-                ftype or "Unknown",                  # Type
-                time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ctime)),  # Created
-                time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(mtime))   # Modified
+                fname,
+                rel_path,
+                f"{size / 1024:.2f} KB",
+                ftype or "Unknown",
+                time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ctime)),
+                time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(mtime))
             ])
             choices.append(rel_path)
 
-    return rows, gr.update(choices=choices, value=None)
+    return rows, gr.update(choices=choices, value=[])
 
-def delete_multiple_and_refresh(folder, selected_rows):
-    if not selected_rows or not isinstance(selected_rows, list):
-        return "⚠️ Please select one or more rows from the table.", gr.update(), gr.update()
+def delete_selected_files(folder, selected_paths):
+    if not selected_paths:
+        return "⚠️ Please select one or more files."
 
-    deleted_files = []
-    errors = []
+    base_path = os.path.abspath(os.path.join(os.getcwd(), "models", folder))
+    deleted, errors = [], []
 
-    for row in selected_rows:
-        if len(row) < 2:
-            continue
-        rel_path = row[1]  # 2nd column = relative path
-        base_path = os.path.abspath(os.path.join(os.getcwd(), "models", folder))
+    for rel_path in selected_paths:
         file_path = os.path.join(base_path, rel_path)
         try:
             os.remove(file_path)
-            deleted_files.append(rel_path)
+            deleted.append(rel_path)
         except Exception as e:
             errors.append(f"{rel_path} → ❌ {e}")
 
-    msg = ""
-    if deleted_files:
-        msg += "✅ Deleted:\n" + "\n".join(deleted_files)
+    message = ""
+    if deleted:
+        message += "✅ Deleted:\n" + "\n".join(deleted)
     if errors:
-        msg += "\n\n⚠️ Errors:\n" + "\n".join(errors)
-    if not deleted_files and not errors:
-        msg = "⚠️ No valid files selected."
+        message += "\n\n⚠️ Errors:\n" + "\n".join(errors)
+    if not deleted and not errors:
+        message = "⚠️ No valid files selected."
 
-    rows, file_list = get_file_details(folder)
-    return msg, rows, gr.update(choices=file_list, value=None)
+    rows, choices = get_file_details(folder)
+    return message, rows, choices
 
 def on_ui_tabs():
     with gr.Blocks() as file_deleter_ui:
-        gr.Markdown("## 🗑️ File Deleter with Details")
+        gr.Markdown("## 🗑️ File Deleter for Stable Diffusion WebUI")
 
         folder_dropdown = gr.Dropdown(
             choices=list_root_folders(),
-            label="📁 Folder (from models)",
+            label="📁 Folder",
             interactive=True
         )
 
-        status = gr.Textbox(label="📝 Status", lines=10, interactive=False)
+        file_multiselect = gr.CheckboxGroup(
+            choices=[],
+            label="📄 Select Files to Delete",
+            interactive=True
+        )
 
         file_table = gr.Dataframe(
             headers=["Name", "Relative Path", "Size", "Type", "Created", "Modified"],
-            label="📊 File Details (select multiple rows)",
-            interactive=True,
-            row_selectable="multi",
-            wrap=True,
-            visible=True
+            label="📊 File Details",
+            interactive=False
         )
 
         delete_btn = gr.Button("❌ Delete Selected Files")
+        status = gr.Textbox(label="📝 Status", lines=10, interactive=False)
 
-        # When folder is selected, update file list and dropdown
         def update_ui(folder):
-            rows, file_list = get_file_details(folder)
-            return rows, file_list
+            rows, choices = get_file_details(folder)
+            return rows, choices
 
-        folder_dropdown.change(
-            fn=update_ui,
-            inputs=folder_dropdown,
-            outputs=[file_table, gr.update()]
-        )
-
-        delete_btn.click(
-            fn=delete_multiple_and_refresh,
-            inputs=[folder_dropdown, file_table],
-            outputs=[status, file_table, gr.update()]
-        )
+        folder_dropdown.change(fn=update_ui, inputs=folder_dropdown, outputs=[file_table, file_multiselect])
+        delete_btn.click(fn=delete_selected_files, inputs=[folder_dropdown, file_multiselect], outputs=[status, file_table, file_multiselect])
 
     return [(file_deleter_ui, "File Deleter", "file_deleter_tab")]
 
