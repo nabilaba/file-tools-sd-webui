@@ -16,7 +16,7 @@ def on_ui_tabs():
         status = gr.Textbox(label="Status", interactive=False)
 
         def update_files(folder):
-            base_path = os.path.abspath(os.path.join(shared.script_path, os.pardir, folder))
+            base_path = os.path.abspath(os.path.join(os.getcwd(), folder))
             if not os.path.isdir(base_path):
                 return []
             file_list = []
@@ -33,7 +33,7 @@ def on_ui_tabs():
             if not rel_path:
                 return "⚠️ Please select a file to delete."
 
-            base_path = os.path.abspath(os.path.join(shared.script_path, os.pardir, folder))
+            base_path = os.path.abspath(os.path.join(os.getcwd(), folder))
             file_path = os.path.join(base_path, rel_path)
 
             if not os.path.isfile(file_path):
