@@ -46,7 +46,6 @@ def on_ui_tabs():
                 ["Full Path", file_path],
                 ["Size (KB)", round(stat.st_size / 1024, 2)],
                 ["Type", os.path.splitext(file_path)[1]],
-                ["Created", format_time(stat.st_ctime)],
                 ["Modified", format_time(stat.st_mtime)],
             ]
             return gr.update(visible=True), file_data
