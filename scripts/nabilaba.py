@@ -64,11 +64,27 @@ def download_file(url, folder):
     os.makedirs(dest_dir, exist_ok=True)
 
     try:
-        filename = os.path.basename(urlparse(url).path) or "downloaded_file"
-        dest_path = os.path.join(dest_dir, filename)
-
         with requests.get(url, stream=True) as r:
             r.raise_for_status()
+
+            # Ambil nama file dari Content-Disposition atau URL
+            filename = None
+            content_disp = r.headers.get("Content-Disposition")
+            if content_disp:
+                import re
+                match = re.findall("filename\\*=UTF-8''(.+)", content_disp)
+                if match:
+                    filename = match[0]
+                else:
+                    match = re.findall("filename=\"?([^\";]+)", content_disp)
+                    if match:
+                        filename = match[0]
+
+            if not filename:
+                filename = os.path.basename(urlparse(url).path) or "downloaded_file"
+
+            dest_path = os.path.join(dest_dir, filename)
+
             total = int(r.headers.get('content-length', 0))
             downloaded = 0
             with open(dest_path, 'wb') as f:
