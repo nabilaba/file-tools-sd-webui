@@ -9,7 +9,7 @@ def list_root_folders():
     return sorted([f for f in os.listdir(root_base) if os.path.isdir(os.path.join(root_base, f))])
 
 def get_file_details(folder):
-    base_path = os.path.abspath(os.path.join(os.getcwd(), folder))
+    base_path = os.path.abspath(os.path.join(os.getcwd(), "models", folder))
     if not os.path.isdir(base_path):
         return [], []
 
@@ -39,7 +39,7 @@ def get_file_details(folder):
 def delete_file(folder, rel_path):
     if not rel_path:
         return "⚠️ Please select a file."
-    base_path = os.path.abspath(os.path.join(os.getcwd(), folder))
+    base_path = os.path.abspath(os.path.join(os.getcwd(), "models", folder))
     file_path = os.path.join(base_path, rel_path)
     if not os.path.isfile(file_path):
         return f"❌ File not found: {rel_path}"
