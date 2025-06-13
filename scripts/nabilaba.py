@@ -204,6 +204,7 @@ def format_cpu_info():
     except Exception as e:
         return f"❌ Error getting CPU info: {e}"
 
+
 def format_gpu_info():
     try:
         from pynvml import (
@@ -247,7 +248,9 @@ def on_ui_tabs():
             uptime_box = gr.Textbox(label="⏱️ System Uptime", interactive=False)
             uptime_box.value = get_uptime()
 
-            storage_info = gr.Textbox(label="💡 Storage Usage",lines=3, interactive=False)
+            storage_info = gr.Textbox(
+                label="💡 Storage Usage", lines=3, interactive=False
+            )
             storage_info.value = get_storage_info()
 
             ram_info_box = gr.Textbox(label="⚡ RAM Status", lines=8, interactive=False)
@@ -279,7 +282,7 @@ def on_ui_tabs():
             fn=refresh_all_info,
             outputs=[storage_info, ram_info_box, cpu_box, gpu_info_box, uptime_box],
         )
-        
+
         with gr.Tab("🗑️ Delete Files"):
             with gr.Row():
                 folder_dropdown = gr.Dropdown(
@@ -327,14 +330,22 @@ def on_ui_tabs():
                             break
                 return selected_paths
 
-            def delete_handler(folder, selected_labels, all_paths):
+            def delete_handler(folder, selected_labels, all_paths, ext_filter):
                 selected_paths = map_labels_to_rel_paths(selected_labels, all_paths)
-                return delete_selected_files(folder, selected_paths)
+                status = delete_selected_files(folder, selected_paths)
+                # Refresh after delete
+                labels, summary, rel_paths = get_file_details(folder, ext_filter)
+                return status, gr.update(choices=labels, value=[]), summary, rel_paths
 
             delete_btn.click(
                 delete_handler,
-                inputs=[folder_dropdown, file_checkbox, hidden_all_rel_paths],
-                outputs=status_box,
+                inputs=[
+                    folder_dropdown,
+                    file_checkbox,
+                    hidden_all_rel_paths,
+                    ext_dropdown,
+                ],
+                outputs=[status_box, file_checkbox, file_summary, hidden_all_rel_paths],
             )
 
         with gr.Tab("⬇️ Download File"):
