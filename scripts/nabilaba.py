@@ -6,6 +6,7 @@ import gradio as gr
 from modules import script_callbacks, sysinfo
 import psutil
 
+
 def list_root_folders():
     root_base = os.path.abspath(os.path.join(os.getcwd(), "models"))
     os.makedirs(root_base, exist_ok=True)
@@ -115,9 +116,11 @@ def perform_download(file_url_or_path, target_folder):
 def refresh_folders():
     return gr.update(choices=list_root_folders())
 
+
 def get_uptime():
     try:
         import time
+
         uptime_seconds = time.time() - psutil.boot_time()
         days = int(uptime_seconds // 86400)
         hours = int((uptime_seconds % 86400) // 3600)
@@ -126,6 +129,7 @@ def get_uptime():
     except Exception as e:
         return f"⚠️ Uptime error: {e}"
 
+
 def get_storage_info():
     total, used, free = shutil.disk_usage(os.getcwd())
     return (
@@ -133,6 +137,7 @@ def get_storage_info():
         f"📂 Used: {format_size(used)}\n"
         f"📭 Free: {format_size(free)}"
     )
+
 
 def format_ram_info():
     try:
@@ -183,6 +188,7 @@ def format_ram_info():
 
     except Exception as e:
         return f"❌ Error getting RAM info: {e}"
+
 
 def format_cpu_info():
     try:
@@ -235,6 +241,7 @@ def format_cpu_info():
     except Exception as e:
         return f"❌ Error getting CPU info: {e}"
 
+
 def format_gpu_info():
     try:
         from pynvml import (
@@ -253,9 +260,9 @@ def format_gpu_info():
             handle = nvmlDeviceGetHandleByIndex(i)
             name = nvmlDeviceGetName(handle).decode()
             mem = nvmlDeviceGetMemoryInfo(handle)
-            total = mem.total / (1024 ** 2)
-            used = mem.used / (1024 ** 2)
-            free = mem.free / (1024 ** 2)
+            total = mem.total / (1024**2)
+            used = mem.used / (1024**2)
+            free = mem.free / (1024**2)
             lines.append(
                 f"🎮 GPU {i}: {name}\n"
                 f"   💾 Total: {total:.0f} MB | 📊 Used: {used:.0f} MB | 🟢 Free: {free:.0f} MB"
@@ -266,6 +273,7 @@ def format_gpu_info():
 
     except Exception as e:
         return f"⚠️ Unable to read GPU info: {e}"
+
 
 def on_ui_tabs():
     with gr.Blocks() as combined_ui:
@@ -290,14 +298,18 @@ def on_ui_tabs():
             gpu_info_box.value = format_gpu_info()
 
             refresh_btn = gr.Button("🔄 Refresh Info")
+
+            def refresh_all_info():
+                return (
+                    get_storage_info(),
+                    format_ram_info(),
+                    format_cpu_info(),
+                    format_gpu_info(),
+                    get_uptime(),
+                )
+
             refresh_btn.click(
-                fn=[
-                    get_storage_info,
-                    format_ram_info,
-                    format_cpu_info,
-                    format_gpu_info,
-                    get_uptime
-                ],
+                fn=refresh_all_info,
                 outputs=[storage_info, ram_info_box, cpu_box, gpu_info_box, uptime_box],
             )
 
