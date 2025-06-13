@@ -99,17 +99,36 @@ def perform_download(file_url_or_path, target_folder):
 def refresh_folders():
     return gr.update(choices=list_root_folders())
 
+def get_storage_info():
+    total, used, free = shutil.disk_usage(os.getcwd())
+    return (
+        f"💽 Total Storage: {format_size(total)}\n"
+        f"📂 Used: {format_size(used)}\n"
+        f"📭 Free: {format_size(free)}"
+    )
+
 def on_ui_tabs():
     with gr.Blocks() as combined_ui:
-        gr.Markdown("## 🧰 File Tools: Delete + Download")
+        gr.Markdown("## 🧰 File Tools")
+
+        with gr.Tab("💾 Storage Info"):
+            storage_info = gr.Textbox(label="💡 Storage Usage", lines=5, interactive=False)
+            refresh_storage_btn = gr.Button("🔁 Refresh Storage Info")
+
+            def update_storage_info():
+                return get_storage_info()
+
+            refresh_storage_btn.click(update_storage_info, outputs=storage_info)
+            # Auto-load on tab open
+            storage_info.value = get_storage_info()
 
         with gr.Tab("🗑️ Delete Files"):
             with gr.Row():
                 folder_dropdown = gr.Dropdown(choices=list_root_folders(), label="📁 Folder", interactive=True)
                 ext_dropdown = gr.Dropdown(choices=["All", ".ckpt", ".safetensors", ".pt", ".bin", ".pth"], label="🔍 Filter by Extension", value="All", interactive=True)
 
-            file_checkbox = gr.CheckboxGroup(choices=[], label="☑️ Select Files (Relative Path + Size)", interactive=True)
             file_summary = gr.Textbox(label="📊 Total File Info", interactive=False)
+            file_checkbox = gr.CheckboxGroup(choices=[], label="☑️ Select Files (Relative Path + Size)", interactive=True)
             delete_btn = gr.Button("❌ Delete Selected Files")
             status_box = gr.Textbox(label="🗘️ Status", lines=10, interactive=False)
             hidden_all_rel_paths = gr.State([])
