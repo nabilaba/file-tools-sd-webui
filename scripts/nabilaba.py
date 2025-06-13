@@ -11,7 +11,14 @@ def list_root_folders():
     return sorted([f for f in os.listdir(root_base) if os.path.isdir(os.path.join(root_base, f))])
 
 def format_size(size_bytes):
-    return f"{size_bytes / 1024:.2f} KB"
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    elif size_bytes < 1024 ** 2:
+        return f"{size_bytes / 1024:.2f} KB"
+    elif size_bytes < 1024 ** 3:
+        return f"{size_bytes / (1024 ** 2):.2f} MB"
+    else:
+        return f"{size_bytes / (1024 ** 3):.2f} GB"
 
 def get_file_details(folder, ext_filter):
     base_path = os.path.abspath(os.path.join(os.getcwd(), "models", folder))
