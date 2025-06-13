@@ -241,9 +241,7 @@ def format_gpu_info():
 
 def on_ui_tabs():
     with gr.Blocks() as combined_ui:
-        gr.Markdown("## 🧰 File Tools")
-
-        with gr.Tab("💾 Simple Info"):
+        with gr.Tab("💾 Simple Info") as simple_info:
             refresh_btn = gr.Button("🔄 Refresh Info")
 
             uptime_box = gr.Textbox(label="⏱️ System Uptime", interactive=False)
@@ -277,6 +275,11 @@ def on_ui_tabs():
                 outputs=[storage_info, ram_info_box, cpu_box, gpu_info_box, uptime_box],
             )
 
+        simple_info.click(
+            fn=refresh_all_info,
+            outputs=[storage_info, ram_info_box, cpu_box, gpu_info_box, uptime_box],
+        )
+        
         with gr.Tab("🗑️ Delete Files"):
             with gr.Row():
                 folder_dropdown = gr.Dropdown(
