@@ -125,7 +125,7 @@ def get_uptime():
         days = int(uptime_seconds // 86400)
         hours = int((uptime_seconds % 86400) // 3600)
         minutes = int((uptime_seconds % 3600) // 60)
-        return f"⏱️ Uptime: {days}d {hours}h {minutes}m"
+        return f"Uptime: {days}d {hours}h {minutes}m"
     except Exception as e:
         return f"⚠️ Uptime error: {e}"
 
@@ -143,7 +143,6 @@ def format_ram_info():
     try:
         ram = sysinfo.get_dict().get("RAM", {})
 
-        # Define icons
         icon_map = {
             "total": "🧠",
             "used": "📊",
@@ -155,36 +154,22 @@ def format_ram_info():
             "shared": "🤝",
         }
 
-        # Left and right column fields
-        left_keys = ["total", "used", "free", "active"]
-        right_keys = ["inactive", "buffers", "cached", "shared"]
-
-        left_lines = []
-        right_lines = []
-
-        for key in left_keys:
+        lines = []
+        for key in [
+            "total",
+            "used",
+            "free",
+            "active",
+            "inactive",
+            "buffers",
+            "cached",
+            "shared",
+        ]:
             if key in ram:
                 icon = icon_map.get(key, "🔹")
                 label = key.capitalize()
-                left_lines.append(f"{icon} {label}: {ram[key]}")
-
-        for key in right_keys:
-            if key in ram:
-                icon = icon_map.get(key, "🔹")
-                label = key.capitalize()
-                right_lines.append(f"{icon} {label}: {ram[key]}")
-
-        # Pad both columns to same length
-        max_len = max(len(left_lines), len(right_lines))
-        left_lines += [""] * (max_len - len(left_lines))
-        right_lines += [""] * (max_len - len(right_lines))
-
-        # Combine with padding
-        output_lines = []
-        for l, r in zip(left_lines, right_lines):
-            output_lines.append(f"{l:<30} {r}")
-
-        return "\n".join(output_lines)
+                lines.append(f"{icon} {label}: {ram[key]}")
+        return "\n".join(lines)
 
     except Exception as e:
         return f"❌ Error getting RAM info: {e}"
@@ -196,47 +181,25 @@ def format_cpu_info():
         cpu_info = data.get("CPU", {})
         torch_cpu_lines = data.get("Torch env info", {}).get("cpu_info", [])
 
-        # Left side fields
-        wanted_left = {
+        field_map = {
             "Architecture:": "🏗️ Architecture",
             "CPU op-mode(s):": "🧮 Modes",
             "Vendor ID:": "🏢 Vendor",
+            "Model name:": "🛠️ Model",
         }
 
-        # Right side fields
-        right_lines = []
-
-        # Get model name
+        lines = []
         for line in torch_cpu_lines:
-            if line.strip().startswith("Model name:"):
-                model_value = line.split(":", 1)[1].strip()
-                right_lines.append(f"🛠️ Model: {model_value}")
-                break
-
-        # Add logical & physical cores
-        logical = cpu_info.get("count logical", "N/A")
-        physical = cpu_info.get("count physical", "N/A")
-        right_lines.append(f"🔣 Logical Cores: {logical}")
-        right_lines.append(f"⚙️ Physical Cores: {physical}")
-
-        # Left side info
-        left_lines = []
-        for line in torch_cpu_lines:
-            for key, label in wanted_left.items():
+            for key, label in field_map.items():
                 if line.strip().startswith(key):
                     value = line.split(":", 1)[1].strip()
-                    left_lines.append(f"{label}: {value}")
+                    lines.append(f"{label}: {value}")
+                    break
 
-        # Pad to equal lengths
-        max_len = max(len(left_lines), len(right_lines))
-        left_lines += [""] * (max_len - len(left_lines))
-        right_lines += [""] * (max_len - len(right_lines))
+        lines.append(f"🔣 Logical: {cpu_info.get('count logical', 'N/A')}")
+        lines.append(f"⚙️ Physical: {cpu_info.get('count physical', 'N/A')}")
 
-        # Format 2-column layout
-        output = []
-        for l, r in zip(left_lines, right_lines):
-            output.append(f"{l:<35} {r}")
-        return "\n".join(output)
+        return "\n".join(lines)
 
     except Exception as e:
         return f"❌ Error getting CPU info: {e}"
@@ -258,14 +221,16 @@ def format_gpu_info():
         device_count = nvmlDeviceGetCount()
         for i in range(device_count):
             handle = nvmlDeviceGetHandleByIndex(i)
-            name = nvmlDeviceGetName(handle).decode()
+            name = nvmlDeviceGetName(handle)
+            if isinstance(name, bytes):
+                name = name.decode()
             mem = nvmlDeviceGetMemoryInfo(handle)
             total = mem.total / (1024**2)
             used = mem.used / (1024**2)
             free = mem.free / (1024**2)
             lines.append(
                 f"🎮 GPU {i}: {name}\n"
-                f"   💾 Total: {total:.0f} MB | 📊 Used: {used:.0f} MB | 🟢 Free: {free:.0f} MB"
+                f"   📐 Total: {total:.0f} MB | 🔥 Used: {used:.0f} MB | 🍃 Free: {free:.0f} MB"
             )
 
         nvmlShutdown()
@@ -283,17 +248,17 @@ def on_ui_tabs():
             uptime_box = gr.Textbox(label="⏱️ System Uptime", interactive=False)
             uptime_box.value = get_uptime()
 
-            storage_info = gr.Textbox(label="💡 Storage Usage", interactive=False)
+            storage_info = gr.Textbox(label="💡 Storage Usage",lines=3, interactive=False)
             storage_info.value = get_storage_info()
 
-            ram_info_box = gr.Textbox(label="🧠 RAM Status", interactive=False)
+            ram_info_box = gr.Textbox(label="⚡ RAM Status", lines=8, interactive=False)
             ram_info_box.value = format_ram_info()
 
-            cpu_box = gr.Textbox(label="🖥️ CPU Details", lines=8, interactive=False)
+            cpu_box = gr.Textbox(label="🖥️ CPU Details", lines=6, interactive=False)
             cpu_box.value = format_cpu_info()
 
             gpu_info_box = gr.Textbox(
-                label="🧠 GPU Detected", lines=5, interactive=False
+                label="🧩 GPU Detected", lines=8, interactive=False
             )
             gpu_info_box.value = format_gpu_info()
 
