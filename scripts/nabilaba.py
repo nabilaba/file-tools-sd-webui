@@ -125,7 +125,7 @@ def get_uptime():
         days = int(uptime_seconds // 86400)
         hours = int((uptime_seconds % 86400) // 3600)
         minutes = int((uptime_seconds % 3600) // 60)
-        return f"Uptime: {days}d {hours}h {minutes}m"
+        return f"{days}d {hours}h {minutes}m"
     except Exception as e:
         return f"⚠️ Uptime error: {e}"
 
@@ -204,7 +204,6 @@ def format_cpu_info():
     except Exception as e:
         return f"❌ Error getting CPU info: {e}"
 
-
 def format_gpu_info():
     try:
         from pynvml import (
@@ -245,6 +244,8 @@ def on_ui_tabs():
         gr.Markdown("## 🧰 File Tools")
 
         with gr.Tab("💾 Simple Info"):
+            refresh_btn = gr.Button("🔄 Refresh Info")
+
             uptime_box = gr.Textbox(label="⏱️ System Uptime", interactive=False)
             uptime_box.value = get_uptime()
 
@@ -261,8 +262,6 @@ def on_ui_tabs():
                 label="🧩 GPU Detected", lines=8, interactive=False
             )
             gpu_info_box.value = format_gpu_info()
-
-            refresh_btn = gr.Button("🔄 Refresh Info")
 
             def refresh_all_info():
                 return (
