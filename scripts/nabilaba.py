@@ -275,7 +275,7 @@ def on_ui_tabs():
                 outputs=[storage_info, ram_info_box, cpu_box, gpu_info_box, uptime_box],
             )
 
-        simple_info.click(
+        simple_info.select(
             fn=refresh_all_info,
             outputs=[storage_info, ram_info_box, cpu_box, gpu_info_box, uptime_box],
         )
