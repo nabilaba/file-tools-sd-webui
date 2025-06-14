@@ -8,7 +8,7 @@ import psutil
 
 
 def list_root_folders():
-    root_base = os.path.abspath(os.path.join(os.getcwd(), "models"))
+    root_base = os.path.abspath(os.path.join(os.getcwd()))
     os.makedirs(root_base, exist_ok=True)
     return sorted(
         [f for f in os.listdir(root_base) if os.path.isdir(os.path.join(root_base, f))]
@@ -27,7 +27,7 @@ def format_size(size_bytes):
 
 
 def get_file_details(folder, ext_filter):
-    base_path = os.path.abspath(os.path.join(os.getcwd(), "models", folder))
+    base_path = os.path.abspath(os.path.join(os.getcwd(), folder))
     if not os.path.isdir(base_path):
         return [], "", []
 
@@ -60,7 +60,7 @@ def delete_selected_files(folder, selected_files):
     if not selected_files:
         return "⚠️ Please select files to delete."
 
-    base_path = os.path.abspath(os.path.join(os.getcwd(), "models", folder))
+    base_path = os.path.abspath(os.path.join(os.getcwd(), folder))
     messages = []
 
     for rel_path in selected_files:
@@ -80,7 +80,7 @@ def delete_selected_files(folder, selected_files):
 def perform_download(file_url_or_path, target_folder):
     try:
         base_folder = os.path.abspath(
-            os.path.join(os.getcwd(), "models", target_folder)
+            os.path.join(os.getcwd(), target_folder)
         )
         os.makedirs(base_folder, exist_ok=True)
 
