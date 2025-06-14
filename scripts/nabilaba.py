@@ -8,11 +8,16 @@ import psutil
 
 
 def list_root_folders():
-    root_base = os.path.abspath(os.path.join(os.getcwd()))
+    root_base = os.path.abspath(os.path.join(os.getcwd(), "models"))
+    outputs_path = os.path.abspath(os.path.join(os.getcwd(), "outputs"))
     os.makedirs(root_base, exist_ok=True)
-    return sorted(
-        [f for f in os.listdir(root_base) if os.path.isdir(os.path.join(root_base, f))]
-    )
+    os.makedirs(outputs_path, exist_ok=True)
+
+    folders = [
+        f for f in os.listdir(root_base) if os.path.isdir(os.path.join(root_base, f))
+    ]
+    folders.append("outputs")  # Add outputs explicitly
+    return sorted(set(folders))
 
 
 def format_size(size_bytes):
@@ -27,7 +32,7 @@ def format_size(size_bytes):
 
 
 def get_file_details(folder, ext_filter):
-    base_path = os.path.abspath(os.path.join(os.getcwd(), folder))
+    base_path = os.path.abspath(os.path.join(os.getcwd(), "models", folder))
     if not os.path.isdir(base_path):
         return [], "", []
 
@@ -60,7 +65,7 @@ def delete_selected_files(folder, selected_files):
     if not selected_files:
         return "⚠️ Please select files to delete."
 
-    base_path = os.path.abspath(os.path.join(os.getcwd(), folder))
+    base_path = os.path.abspath(os.path.join(os.getcwd(), "models", folder))
     messages = []
 
     for rel_path in selected_files:
@@ -80,7 +85,7 @@ def delete_selected_files(folder, selected_files):
 def perform_download(file_url_or_path, target_folder):
     try:
         base_folder = os.path.abspath(
-            os.path.join(os.getcwd(), target_folder)
+            os.path.join(os.getcwd(), "models", target_folder)
         )
         os.makedirs(base_folder, exist_ok=True)
 
@@ -296,6 +301,7 @@ def on_ui_tabs():
                 )
 
             file_summary = gr.Textbox(label="📊 Total File Info", interactive=False)
+            delete_all_btn = gr.Button("🔥 Delete All Files in Folder")
             file_checkbox = gr.CheckboxGroup(
                 choices=[],
                 label="☑️ Select Files (Relative Path + Size)",
@@ -330,12 +336,25 @@ def on_ui_tabs():
                             break
                 return selected_paths
 
+            def delete_all_files(folder, ext_filter):
+                # Ambil semua file berdasarkan folder dan filter
+                _, _, all_paths = get_file_details(folder, ext_filter)
+                status = delete_selected_files(folder, all_paths)
+                labels, summary, rel_paths = get_file_details(folder, ext_filter)
+                return status, gr.update(choices=labels, value=[]), summary, rel_paths
+
             def delete_handler(folder, selected_labels, all_paths, ext_filter):
                 selected_paths = map_labels_to_rel_paths(selected_labels, all_paths)
                 status = delete_selected_files(folder, selected_paths)
                 # Refresh after delete
                 labels, summary, rel_paths = get_file_details(folder, ext_filter)
                 return status, gr.update(choices=labels, value=[]), summary, rel_paths
+
+            delete_all_btn.click(
+                delete_all_files,
+                inputs=[folder_dropdown, ext_dropdown],
+                outputs=[status_box, file_checkbox, file_summary, hidden_all_rel_paths],
+            )
 
             delete_btn.click(
                 delete_handler,
