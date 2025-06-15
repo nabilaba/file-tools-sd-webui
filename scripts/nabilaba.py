@@ -9,14 +9,14 @@ import psutil
 
 def list_root_folders():
     root_base = os.path.abspath(os.path.join(os.getcwd(), "models"))
-    outputs_path = os.path.abspath(os.path.join(os.getcwd(), "outputs"))
+    outputs_path = os.path.abspath(os.path.join(os.getcwd()))
     os.makedirs(root_base, exist_ok=True)
     os.makedirs(outputs_path, exist_ok=True)
 
     folders = [
         f for f in os.listdir(root_base) if os.path.isdir(os.path.join(root_base, f))
     ]
-    folders.append("outputs")  # Add outputs explicitly
+    folders.append("root")
     return sorted(set(folders))
 
 
