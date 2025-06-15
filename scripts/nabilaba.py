@@ -36,8 +36,15 @@ def format_size(size_bytes):
 
 
 def get_file_details(folder, ext_filter):
-    base_path = os.path.abspath(os.path.join(os.getcwd(), "models", folder))
-    if not os.path.isdir(base_path):
+    models_base = os.path.abspath(os.path.join(os.getcwd(), "models"))
+    folder_in_models = os.path.join(models_base, folder)
+    folder_in_root = os.path.join(os.getcwd(), folder)
+
+    if os.path.isdir(folder_in_models):
+        base_path = folder_in_models
+    elif os.path.isdir(folder_in_root):
+        base_path = folder_in_root
+    else:
         return [], "", []
 
     file_choices = []
@@ -69,7 +76,18 @@ def delete_selected_files(folder, selected_files):
     if not selected_files:
         return "⚠️ Please select files to delete."
 
-    base_path = os.path.abspath(os.path.join(os.getcwd(), "models", folder))
+    models_base = os.path.abspath(os.path.join(os.getcwd(), "models"))
+    folder_in_models = os.path.join(models_base, folder)
+    folder_in_root = os.path.join(os.getcwd(), folder)
+
+    # Determine actual folder path
+    if os.path.isdir(folder_in_models):
+        base_path = folder_in_models
+    elif os.path.isdir(folder_in_root):
+        base_path = folder_in_root
+    else:
+        return f"❌ Error: Folder '{folder}' not found in root or models/"
+
     messages = []
 
     for rel_path in selected_files:
