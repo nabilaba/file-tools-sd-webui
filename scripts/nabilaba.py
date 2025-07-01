@@ -329,7 +329,9 @@ def on_ui_tabs():
                 label="☑️ Select Files (Relative Path + Size)",
                 interactive=True,
             )
-            delete_btn = gr.Button("❌ Delete Selected Files")
+            with gr.Row():
+                delete_btn = gr.Button("❌ Delete Selected Files")
+                download_btn = gr.Button("⬇️ Download Selected Files")
             status_box = gr.Textbox(label="🗘️ Status", lines=10, interactive=False)
             hidden_all_rel_paths = gr.State([])
 
@@ -372,6 +374,34 @@ def on_ui_tabs():
                 labels, summary, rel_paths = get_file_details(folder, ext_filter)
                 return status, gr.update(choices=labels, value=[]), summary, rel_paths
 
+            def download_selected_files(folder, selected_labels, all_paths, ext_filter):
+                import zipfile
+                from datetime import datetime
+                import tempfile
+
+                selected_paths = map_labels_to_rel_paths(selected_labels, all_paths)
+                if not selected_paths:
+                    return "⚠️ No files selected for download."
+
+                models_base = os.path.abspath(os.path.join(os.getcwd(), "models"))
+                folder_in_models = os.path.join(models_base, folder)
+                folder_in_root = os.path.join(os.getcwd(), folder)
+                base_path = folder_in_models if os.path.isdir(folder_in_models) else folder_in_root
+
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                zip_filename = f"{folder}_{timestamp}.zip"
+                zip_path = os.path.join(tempfile.gettempdir(), zip_filename)
+
+                try:
+                    with zipfile.ZipFile(zip_path, "w") as zipf:
+                        for rel_path in selected_paths:
+                            abs_path = os.path.join(base_path, rel_path)
+                            if os.path.isfile(abs_path):
+                                zipf.write(abs_path, arcname=rel_path)
+                    return gr.File(value=zip_path, label="📦 Download ZIP File")
+                except Exception as e:
+                    return f"❌ Error: {e}"
+
             delete_all_btn.click(
                 delete_all_files,
                 inputs=[folder_dropdown, ext_dropdown],
@@ -388,6 +418,18 @@ def on_ui_tabs():
                 ],
                 outputs=[status_box, file_checkbox, file_summary, hidden_all_rel_paths],
             )
+
+            download_btn.click(
+                download_selected_files,
+                inputs=[
+                    folder_dropdown,
+                    file_checkbox,
+                    hidden_all_rel_paths,
+                    ext_dropdown
+                ],
+                outputs=[status_box]
+            )
+
 
         with gr.Tab("⬇️ Download File"):
             with gr.Row():
