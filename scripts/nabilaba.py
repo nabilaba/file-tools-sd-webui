@@ -332,7 +332,9 @@ def on_ui_tabs():
             with gr.Row():
                 delete_btn = gr.Button("❌ Delete Selected Files")
                 download_btn = gr.Button("⬇️ Download Selected Files")
+
             status_box = gr.Textbox(label="🗘️ Status", lines=10, interactive=False)
+            download_output_file = gr.File(label="⬇️ Download ZIP File", visible=True)
             hidden_all_rel_paths = gr.State([])
 
             def update_files(folder, ext):
@@ -381,7 +383,7 @@ def on_ui_tabs():
 
                 selected_paths = map_labels_to_rel_paths(selected_labels, all_paths)
                 if not selected_paths:
-                    return "⚠️ No files selected for download."
+                    return "⚠️ No files selected for download.", None
 
                 models_base = os.path.abspath(os.path.join(os.getcwd(), "models"))
                 folder_in_models = os.path.join(models_base, folder)
@@ -398,9 +400,10 @@ def on_ui_tabs():
                             abs_path = os.path.join(base_path, rel_path)
                             if os.path.isfile(abs_path):
                                 zipf.write(abs_path, arcname=rel_path)
-                    return gr.File(value=zip_path, label="📦 Download ZIP File")
+
+                    return f"✅ Zipped {len(selected_paths)} file(s)", zip_path
                 except Exception as e:
-                    return f"❌ Error: {e}"
+                    return f"❌ Error: {e}", None
 
             delete_all_btn.click(
                 delete_all_files,
@@ -427,7 +430,7 @@ def on_ui_tabs():
                     hidden_all_rel_paths,
                     ext_dropdown
                 ],
-                outputs=[status_box]
+                outputs=[status_box, download_output_file]
             )
 
 
